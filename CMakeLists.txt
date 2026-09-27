@@ -87,7 +87,7 @@ endif()
 
 if (POLICY CMP0167)
     cmake_policy(SET CMP0167 NEW)
-    find_package(Boost CONFIG)
+    find_package(Boost ${BOOST_MINIMUM_VERSION} REQUIRED CONFIG)
 else (POLICY CMP0167)
     find_package(Boost ${BOOST_MINIMUM_VERSION} REQUIRED)
 endif (POLICY CMP0167)
