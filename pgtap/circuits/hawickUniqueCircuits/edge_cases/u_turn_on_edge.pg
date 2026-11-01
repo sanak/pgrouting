@@ -5,7 +5,7 @@
 
 BEGIN;
 
-SELECT CASE WHEN min_version('4.1.0') THEN plan(11) ELSE plan(1) END;
+SELECT CASE WHEN min_version('4.1.0') THEN plan(12) ELSE plan(1) END;
 
 CREATE OR REPLACE FUNCTION u_turn_on_edge()
 RETURNS SETOF TEXT AS
@@ -178,6 +178,30 @@ BEGIN
   SELECT is((SELECT count(*)::INTEGER
       FROM pgr_hawickUniqueCircuits('p', 1, 1, 5, true, false) WHERE edge = -1), 1,
       'u_turn_on_edge => false -> parallel arcs collapse to a single circuit');
+
+  -- u_turn_on_edge => false changes only the u-turns:
+  -- the other circuits keep the minimum cost parallel arc (edge 3, not edge 4)
+
+  PREPARE g_uturn_min AS
+  SELECT id, source, target, cost, reverse_cost
+  FROM (VALUES (3, 1, 3, 1, 1), (4, 1, 3, 1.5, 1.7), (2, 2, 3, 1, 1), (1, 1, 2, 1, 1)) AS t(id, source, target, cost, reverse_cost);
+
+  PREPARE g_uturn_min_cyc AS
+  SELECT node, edge, cost, agg_cost
+  FROM pgr_hawickUniqueCircuits('g_uturn_min', 1, u_turn_on_edge => false)
+  WHERE path_id IN (
+      SELECT path_id FROM pgr_hawickUniqueCircuits('g_uturn_min', 1, u_turn_on_edge => false)
+      GROUP BY path_id HAVING count(*) = 4 AND bool_or(node = 3 AND depth = 1));
+
+  RETURN QUERY
+  SELECT set_eq('g_uturn_min_cyc',
+      $$VALUES
+          (1, -1, 0, 0),
+          (3, 3, 1, 1),
+          (2, 2, 1, 2),
+          (1, 1, 1, 3)
+      $$,
+      'u_turn_on_edge => false -> circuit 1-3-2-1 uses the minimum cost edge 3');
 
 END;
 $BODY$

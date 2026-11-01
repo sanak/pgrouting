@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 #include <set>
 #include <utility>
 #include <vector>
@@ -160,12 +161,10 @@ enumerate_vertex_circuits(
  * Every hop of the cycle is replaced by each of the parallel arcs that connect
  * the same pair of vertices, producing the cartesian product of the arcs.
  */
-void
-expand_parallel_arcs(
+std::vector<std::vector<pgrouting::DirectedGraph::E>>
+get_hops(
         const pgrouting::DirectedGraph& graph,
-        const std::vector<pgrouting::DirectedGraph::V>& vertex_circuit,
-        pgrouting::types::Circuits& circuits,
-        bool u_turn_on_edge) {
+        const std::vector<pgrouting::DirectedGraph::V>& vertex_circuit) {
     using E = pgrouting::DirectedGraph::E;
 
     const size_t size = vertex_circuit.size();
@@ -189,8 +188,20 @@ expand_parallel_arcs(
         * So a partial expansion must not be emitted
         * — drop the whole circuit.
         */
-        if (hops[i].empty()) return;
+        if (hops[i].empty()) return {};
     }
+    return hops;
+}
+
+void
+expand_parallel_arcs(
+        const pgrouting::DirectedGraph& graph,
+        const std::vector<pgrouting::DirectedGraph::V>& vertex_circuit,
+        pgrouting::types::Circuits& circuits,
+        bool u_turn_on_edge) {
+    const size_t size = vertex_circuit.size();
+    auto hops = get_hops(graph, vertex_circuit);
+    if (hops.empty()) return;
 
     std::vector<size_t> indexes(size, 0);
     pgrouting::types::Circuits u_turns;
@@ -240,23 +251,47 @@ expand_parallel_arcs(
 
 /** @brief Resolves one unique circuit over the graph's edges
  *
- * Every hop of the vertex cycle is resolved to exactly one edge
+ * Every hop of the vertex cycle is resolved to its minimum cost parallel arc
  * keeping a single circuit per vertex cycle.
+ * When u_turn_on_edge is false, a circuit of two hops using the same edge id
+ * on both hops uses instead the minimum cost pair of different edges,
+ * if such pair exists.
  */
 void
 resolve_unique_circuit(
         const pgrouting::DirectedGraph& graph,
         const std::vector<pgrouting::DirectedGraph::V>& vertex_circuit,
-        pgrouting::types::Circuits& circuits) {
+        pgrouting::types::Circuits& circuits,
+        bool u_turn_on_edge) {
+    using E = pgrouting::DirectedGraph::E;
+
     const size_t size = vertex_circuit.size();
+    auto hops = get_hops(graph, vertex_circuit);
+    if (hops.empty()) return;
+
+    std::vector<E> chosen(size);
+    for (size_t i = 0; i < size; ++i) {
+        chosen[i] = *std::min_element(hops[i].begin(), hops[i].end(),
+                [&graph](const E &lhs, const E &rhs) {return graph[lhs].cost < graph[rhs].cost;});
+    }
+
+    if (!u_turn_on_edge && size == 2 && graph[chosen[0]].id == graph[chosen[1]].id) {
+        double best = (std::numeric_limits<double>::max)();
+        for (const auto &going : hops[0]) {
+            for (const auto &coming : hops[1]) {
+                if (graph[going].id == graph[coming].id) continue;
+                if (graph[going].cost + graph[coming].cost < best) {
+                    best = graph[going].cost + graph[coming].cost;
+                    chosen = {going, coming};
+                }
+            }
+        }
+    }
+
     pgrouting::types::Circuit circuit;
     circuit.reserve(size);
-
     for (size_t i = 0; i < size; ++i) {
-        const auto to = vertex_circuit[(i + 1) % size];
-        double cost = 0;
-        const auto edge_id = graph.get_edge_id(vertex_circuit[i], to, cost);
-        circuit.push_back({graph[vertex_circuit[i]].id, edge_id, cost});
+        circuit.push_back({graph[vertex_circuit[i]].id, graph[chosen[i]].id, graph[chosen[i]].cost});
     }
 
     circuits.push_back(std::move(circuit));
@@ -328,6 +363,8 @@ hawickCircuits(
  * @param min_depth  minimum depth of the circuits to be returned
  * @param max_depth  maximum depth of the circuits to be returned
  * @param self_loops  when false, the circuits of depth 1 are not returned
+ * @param u_turn_on_edge  when false, a circuit of two hops using the same edge
+ * on both hops uses different edges when they exist
  * @returns results, when results are found
  */
 pgrouting::types::Circuits
@@ -336,12 +373,13 @@ hawickUniqueCircuits(
         const std::set<int64_t> &vertices,
         int64_t min_depth,
         int64_t max_depth,
-        bool self_loops) {
+        bool self_loops,
+        bool u_turn_on_edge) {
     auto vertex_circuits = enumerate_vertex_circuits(graph, vertices, min_depth, max_depth, self_loops);
 
     pgrouting::types::Circuits circuits;
     for (const auto& vertex_circuit : vertex_circuits) {
-        resolve_unique_circuit(graph, vertex_circuit, circuits);
+        resolve_unique_circuit(graph, vertex_circuit, circuits, u_turn_on_edge);
     }
     sort_by_start_vid(circuits, vertices);
 

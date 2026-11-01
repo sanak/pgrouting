@@ -246,12 +246,6 @@ do_shortestPath(
                     digraph.insert_no_edge_cycle(edges);
                     break;
                 case HAWICKUNIQUECIRCUITS:
-                    if (u_turn_on_edge) {
-                        digraph.insert_min_edges_no_parallel(edges, circuit_starts);
-                    } else {
-                        digraph.insert_edges_no_parallel(edges, circuit_starts);
-                    }
-                    break;
                 case OLDHAWICKCIRCUITS:
                 case HAWICKCIRCUITS:
                     digraph.insert_edges(edges, circuit_starts);
@@ -292,7 +286,8 @@ do_shortestPath(
                     break;
                 case HAWICKUNIQUECIRCUITS:
                     return_count = get_tuples(
-                            hawickUniqueCircuits(digraph, circuit_starts, min_depth, max_depth, self_loops),
+                            hawickUniqueCircuits(
+                                digraph, circuit_starts, min_depth, max_depth, self_loops, u_turn_on_edge),
                             return_tuples);
                     break;
                 case BINARYBFS:
