@@ -6,7 +6,7 @@
 BEGIN;
 
 UPDATE edges SET cost = sign(cost), reverse_cost = sign(reverse_cost);
-SELECT CASE WHEN min_version('4.1.0') THEN plan(54) ELSE plan(1) END;
+SELECT CASE WHEN min_version('4.1.0') THEN plan(216) ELSE plan(1) END;
 
 CREATE OR REPLACE FUNCTION inner_query()
 RETURNS SETOF TEXT AS
@@ -15,12 +15,14 @@ BEGIN
 
   IF NOT min_version('4.1.0') THEN
     RETURN QUERY
-    SELECT skip(1, 'pgr_hawickUniquecircuits is new on 4.1.0');
+    SELECT skip(1, 'pgr_hawickcircuits is new on 4.1.0');
     RETURN;
   END IF;
 
-  RETURN QUERY
-  SELECT style_dijkstra('pgr_hawickUniquecircuits(', ')');
+  RETURN QUERY SELECT style_dijkstra('pgr_hawickcircuits(', ')');
+  RETURN QUERY SELECT style_dijkstra('pgr_hawickcircuits(', ', 0)');
+  RETURN QUERY SELECT style_dijkstra('pgr_hawickcircuits(', ', 1)');
+  RETURN QUERY SELECT style_dijkstra('pgr_hawickcircuits(', ', ARRAY[1,2]::INTEGER[])');
 
 END;
 $BODY$

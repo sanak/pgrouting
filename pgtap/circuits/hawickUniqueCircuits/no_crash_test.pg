@@ -6,7 +6,7 @@
 BEGIN;
 
 UPDATE edges SET cost = sign(cost), reverse_cost = sign(reverse_cost);
-SELECT CASE WHEN min_version('4.1.0') THEN plan(8) ELSE plan(1) END;
+SELECT CASE WHEN min_version('4.1.0') THEN plan(32) ELSE plan(1) END;
 
 PREPARE edges_q AS
 SELECT id, source, target, cost, reverse_cost FROM edges;
@@ -21,7 +21,7 @@ BEGIN
 
   IF NOT min_version('4.1.0') THEN
     RETURN QUERY
-    SELECT skip(1, 'pgr_hawickUniquecircuits is new on 4.1.0');
+    SELECT skip(1, 'pgr_hawickcircuits is new on 4.1.0');
     RETURN;
   END IF;
 
@@ -30,10 +30,32 @@ BEGIN
   ]::TEXT[];
 
   subs = ARRAY[ 'NULL' ]::TEXT[];
-  RETURN query SELECT * FROM no_crash_test('pgr_hawickUniquecircuits', params, subs);
+  RETURN query SELECT * FROM no_crash_test('pgr_hawickcircuits', params, subs);
 
   params = ARRAY[ '$$edges_q$$' ]::TEXT[];
-  RETURN query SELECT * FROM no_crash_test('pgr_hawickUniquecircuits', params, subs);
+  RETURN query SELECT * FROM no_crash_test('pgr_hawickcircuits', params, subs);
+
+  params = ARRAY[
+  '$$SELECT id, source, target, cost, reverse_cost FROM edges$$',
+  '1'
+  ]::TEXT[];
+
+  subs = ARRAY[ 'NULL::TEXT', 'NULL::INTEGER' ]::TEXT[];
+  RETURN query SELECT * FROM no_crash_test('pgr_hawickcircuits', params, subs);
+
+  params = ARRAY[ '$$edges_q$$', '1' ]::TEXT[];
+  RETURN query SELECT * FROM no_crash_test('pgr_hawickcircuits', params, subs);
+
+  params = ARRAY[
+  '$$SELECT id, source, target, cost, reverse_cost FROM edges$$',
+  'ARRAY[1,2]::INTEGER[]'
+  ]::TEXT[];
+
+  subs = ARRAY[ 'NULL::TEXT', 'NULL::INTEGER[]' ]::TEXT[];
+  RETURN query SELECT * FROM no_crash_test('pgr_hawickcircuits', params, subs);
+
+  params = ARRAY[ '$$edges_q$$', 'ARRAY[1,2]::INTEGER[]' ]::TEXT[];
+  RETURN query SELECT * FROM no_crash_test('pgr_hawickcircuits', params, subs);
 
 END
 $BODY$
