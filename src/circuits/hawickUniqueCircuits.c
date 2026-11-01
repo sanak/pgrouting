@@ -1,5 +1,5 @@
 /*PGR-GNU*****************************************************************
-File: hawickuniqueCircuits.c
+File: hawickUniqueCircuits.c
 Generated with Template by:
 
 Copyright (c) 2015-2026 pgRouting developers

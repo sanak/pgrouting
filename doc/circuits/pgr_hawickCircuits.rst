@@ -58,7 +58,6 @@ enumerated.
 
 - When start vertices are given, all circuits are returned for each requested
   vertex it contains, and the results are grouped by ``start_vid``.
-- The graph passed to the algorithm discard parallel edges with higher costs.
 - Time Complexity: :math:`O((V + E) (c + 1))`
 
   - where :math:`|E|` is the number of edges in the graph,

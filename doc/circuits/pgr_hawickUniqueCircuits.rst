@@ -20,9 +20,9 @@ circuits algorithm.
 
 .. rubric:: Availability
 
-* Version 4.1.0
+.. rubric:: Version 4.1.0
 
-  * New experimental function.
+* New experimental function.
 
 Description
 -------------------------------------------------------------------------------
@@ -32,6 +32,9 @@ This algorithm solves the problem of detecting and enumerating circuits in graph
 
 Circuit enumeration in directed graphs, where parallel circuits are listed only
 once.
+
+- Of the parallel arcs, a circuit uses the one with the minimum cost, except on
+  a u-turn when ``u_turn_on_edge`` is ``false``.
 
 .. include:: pgr_hawickCircuits.rst
    :start-after: circuits_characteristics_start
@@ -229,9 +232,12 @@ Additional Examples
 
 :Example 3: Exclude self loops and U-turn on the same edge.
 
-- red is :math:`path\_id = 1`
-- green is :math:`path\_id = 2`
-- blue is :math:`path\_id = 3`
+- purple is :math:`path\_id = 1`: the u-turn is kept, there is only one edge.
+- red is :math:`path\_id = 2`
+- green is :math:`path\_id = 3`: uses edges 4 and 3 instead of the u-turn on
+  edge 3.
+- blue is :math:`path\_id = 4`
+- orange is :math:`path\_id = 5`: the u-turn is kept, there is only one edge.
 
 .. graphviz::
 
@@ -247,12 +253,12 @@ Additional Examples
      4 [pos="-1,0!"];
      5 [pos="-1,1!"];
 
-
+     1 -> 2 [color=purple,dir=both];
      1 -> 2 -> 3 -> 1 [color=red];
      1 -> 3 [color=green,penwidth=2];
      3 -> 1 [color=green];
-     1 -> 3 [color=blue,penwidth=2];
-     3 -> 2 -> 1[color=blue];
+     1 -> 3 -> 2 -> 1 [color=blue];
+     1 -> 4 [color=orange,dir=both]
    }
 
 
@@ -265,7 +271,7 @@ See Also
 
 * :doc:`sampledata`
 * `Boost: Hawick Circuit Algorithm
-  <https://www.boost.org/doc/libs/1_78_0/libs/graph/doc/hawick_circuits.html>`__
+  <https://www.boost.org/doc/libs/latest/libs/graph/doc/html/graph/algorithms/cycle_detection/hawick_circuits.html>`__
 
 .. rubric:: Indices and tables
 
