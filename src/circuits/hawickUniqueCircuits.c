@@ -100,38 +100,28 @@ PGDLLEXPORT Datum _pgr_hawickuniquecircuits(PG_FUNCTION_ARGS) {
             nulls[i] = false;
         }
 
-        /* edge < 0 marks the depth-0 row that starts each circuit */
-        int64_t depth;
-        int64_t circuit_id;
-        if (call_cntr == 0) {
-            depth = 0;
-            circuit_id = 1;
-        } else if (result_tuples[call_cntr].edge < 0) {
-            depth = 0;
-            circuit_id = result_tuples[call_cntr - 1].end_id + 1;
-        } else {
-            depth = result_tuples[call_cntr - 1].start_id + 1;
-            circuit_id = result_tuples[call_cntr - 1].end_id;
-        }
+        /* end_id is the circuit number: a new circuit starts at depth 0 */
+        int64_t circuit_id = result_tuples[call_cntr].end_id;
+        bool same_circuit = call_cntr > 0 && result_tuples[call_cntr - 1].end_id == circuit_id;
+        int64_t depth = same_circuit ? result_tuples[call_cntr - 1].start_id + 1 : 0;
 
-        int64_t pred = (call_cntr == 0 || result_tuples[call_cntr].edge < 0)
-            ? result_tuples[call_cntr].node
-            : result_tuples[call_cntr - 1].node;
+        int64_t pred = same_circuit
+            ? result_tuples[call_cntr - 1].node
+            : result_tuples[call_cntr].node;
 
         values[0] = Int32GetDatum((int32_t)call_cntr + 1);
         values[1] = Int32GetDatum((int32_t)circuit_id);
         values[2] = Int32GetDatum((int32_t)depth);
         values[3] = Int64GetDatum(result_tuples[call_cntr].start_id);
-        values[4] = Int64GetDatum(result_tuples[call_cntr].end_id);
+        values[4] = Int64GetDatum(result_tuples[call_cntr].start_id);
         values[5] = Int64GetDatum(pred);
         values[6] = Int64GetDatum(result_tuples[call_cntr].node);
         values[7] = Int64GetDatum(result_tuples[call_cntr].edge);
         values[8] = Float8GetDatum(result_tuples[call_cntr].cost);
         values[9] = Float8GetDatum(result_tuples[call_cntr].agg_cost);
 
-        /* scratch: this row's depth / circuit_id for the next row to read */
+        /* scratch: this row's depth for the next row to read */
         result_tuples[call_cntr].start_id = depth;
-        result_tuples[call_cntr].end_id   = circuit_id;
 
         tuple = heap_form_tuple(tuple_desc, values, nulls);
         result = HeapTupleGetDatum(tuple);

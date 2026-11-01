@@ -374,11 +374,17 @@ get_tuples(
 
     tuples = pgr_alloc(count, tuples);
 
+    /*
+     * A circuit starts and ends on the same vertex, so end_id carries the
+     * circuit number: edge ids can be negative and can not mark the circuits.
+     */
     size_t sequence = 0;
+    int64_t circuit_id = 0;
     for (const auto &circuit : circuits) {
         auto start_vid = circuit.front().node;
+        ++circuit_id;
         /* depth 0: the start node has no incoming edge */
-        tuples[sequence++] = {start_vid, start_vid, start_vid, -1, 0, 0};
+        tuples[sequence++] = {start_vid, circuit_id, start_vid, -1, 0, 0};
         double agg_cost = 0;
         for (size_t i = 0; i < circuit.size(); ++i) {
             agg_cost += circuit[i].cost;
@@ -388,7 +394,7 @@ get_tuples(
                 ? circuit[i + 1].node
                 : start_vid;
             tuples[sequence++] = {
-                start_vid, start_vid,
+                start_vid, circuit_id,
                 next_node,
                 circuit[i].edge,
                 circuit[i].cost,
